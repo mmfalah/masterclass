@@ -6,6 +6,9 @@
 <title>Masterclass Academy — Kecerdasan Artifisial, Penelitian &amp; Pendidikan</title>
 <meta name="description" content="Pusat pengembangan kompetensi yang berfokus pada Kecerdasan Artifisial, Penelitian, dan Pendidikan. Sertifikat resmi ber-QR TTE.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<link rel="dns-prefetch" href="https://script.google.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -625,13 +628,25 @@ function showLoadError(){
     + '<button class="btn primary sm" onclick="loadHomeData()">Coba lagi</button>'
     + '</div>';
 }
+var HOME_RENDERED=false;
+function paintHome(d){ applyConfig(d.config||{}); gotClasses(d.classes); HOME_RENDERED=true; }
 function loadHomeData(){
   _homeTries++;
-  $('#homeClassGrid').innerHTML = homeSkeleton();
+  // 1) Tampilkan data cache secara INSTAN (bila ada) — homepage langsung terisi.
+  if(!HOME_RENDERED){
+    var cached=null; try{ cached=JSON.parse(localStorage.getItem('mca_home_v1')||'null'); }catch(e){}
+    if(cached && cached.classes && cached.classes.length){ paintHome(cached); }
+    else { $('#homeClassGrid').innerHTML = homeSkeleton(); }
+  }
+  // 2) Ambil data terbaru di latar belakang, lalu perbarui + simpan cache.
   jsonp('home', function(d){
-    if(d && d.classes){ applyConfig(d.config||{}); gotClasses(d.classes); return; }
-    if(_homeTries < 3){ setTimeout(loadHomeData, 600); }   // retry beberapa kali (atasi cold-start GAS)
-    else { showLoadError(); }
+    if(d && d.classes){
+      paintHome(d);
+      try{ localStorage.setItem('mca_home_v1', JSON.stringify(d)); }catch(e){}
+      return;
+    }
+    if(_homeTries < 4){ setTimeout(loadHomeData, 500); }   // retry (atasi cold-start GAS)
+    else if(!HOME_RENDERED){ showLoadError(); }
   });
 }
 
